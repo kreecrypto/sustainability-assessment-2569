@@ -11,7 +11,7 @@ const TOPICS=[
 'ความมั่นคงปลอดภัยทางไซเบอร์ ข้อมูล และความเป็นส่วนตัว',
 'การบริหารความเสี่ยงและความต่อเนื่องทางธุรกิจ'
 ];
-const state={view:new URLSearchParams(location.search).get('view')==='dashboard'?'dashboard':'vote',demo:new URLSearchParams(location.search).get('demo')==='1',votes:{},stats:null,ready:false,error:'',saving:new Set(),last:null,isOpen:true};
+const state={view:new URLSearchParams(location.search).get('view')==='dashboard'?'dashboard':'vote',demo:new URLSearchParams(location.search).get('demo')==='1',votes:{},stats:null,ready:false,error:'',saving:new Set(),last:null,isOpen:true,resetGeneration:null,adminOpen:false,resetConfirmOpen:false,resetLoading:false};
 const app=document.getElementById('app');
 const $=(id)=>document.getElementById(id);
 const esc=(v)=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -19,7 +19,7 @@ const pad=(x)=>String(x).padStart(2,'0');
 const fmt=(v)=>v==null?'–':Number(v).toFixed(2);
 let toastTimeout=null;
 function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>el.classList.remove('show'),3000);}
-function demoStats(){const fake=TOPICS.map((_,i)=>({topic_id:i+1,necessity_avg:[3.1,4.0,4.8,4.1,3.8,4.2,3.4,4.7,4.8,4.5][i],complexity_avg:[3.3,2.7,2.9,4.1,3.0,3.5,2.3,4.5,4.4,3.7][i],vote_count:12}));return {stats:fake,overview:{total_participants:12,completed_participants:12,total_votes:120},is_open:true};}
+function demoStats(){const fake=TOPICS.map((_,i)=>({topic_id:i+1,necessity_avg:[3.1,4.0,4.8,4.1,3.8,4.2,3.4,4.7,4.8,4.5][i],complexity_avg:[3.3,2.7,2.9,4.1,3.0,3.5,2.3,4.5,4.4,3.7][i],vote_count:12}));return {stats:fake,overview:{total_participants:12,completed_participants:12,total_votes:120},is_open:true,reset_generation:0};}
 async function api(path,options){
   const response=await fetch('/api/'+path,{credentials:'same-origin',cache:'no-store',...options});
   let result;try{result=await response.json();}catch{throw new Error('ไม่สามารถอ่านข้อมูลจากเซิร์ฟเวอร์ได้');}
@@ -40,17 +40,17 @@ function switchView(view){
 }
 $('tab-vote').addEventListener('click',()=>switchView('vote'));
 $('tab-dashboard').addEventListener('click',()=>switchView('dashboard'));
-function countComplete(){return TOPICS.filter((_,i)=>{const v=state.votes[i+1];return v&&v.necessity&&v.complexity;}).length;}
+function countComplete(){return TOPICS.filter((_,i)=>{const v=state.votes[i+1];return v&&v.saved&&v.necessity&&v.complexity;}).length;}
 function voteCard(topic,i){
- const id=i+1,v=state.votes[id]||{},saved=v.saved||false;
+ const id=i+1,v=state.votes[id]||{},saved=v.saved||false,working=state.saving.has(id),partial=!!(v.necessity||v.complexity);
  function scale(name,label){
   return '<div><div class="criteria-label">'+label+' <small>(1–5)</small></div><div class="scale '+(name==='complexity'?'complex':'')+'">'+
   [1,2,3,4,5].map(n=>'<button type="button" aria-label="ประเด็น '+id+' '+label+' ระดับ '+n+' จาก 5" aria-pressed="'+(v[name]===n)+'" data-topic="'+id+'" data-criterion="'+name+'" data-score="'+n+'" class="'+(v[name]===n?'selected':'')+'" '+(!state.isOpen||state.saving.has(id)?'disabled':'')+'>'+n+'</button>').join('')+
   '</div><div class="helptext"><span>ต่ำมาก</span><span>สูงมาก</span></div></div>';
  }
- return '<article class="card panel topic-card '+(saved?'saved':'')+'" id="topic-'+id+'"><div class="topic-head"><span class="topic-no">'+pad(id)+'</span><h2>'+esc(topic)+'</h2><span class="saved-icon">'+(saved?'✓ บันทึกแล้ว':'')+'</span></div><div class="criteria">'+scale('necessity','Necessity · ความจำเป็น')+scale('complexity','Complexity · ความซับซ้อน')+'</div></article>';
+ return '<article class="card panel topic-card '+(saved?'saved':'')+'" id="topic-'+id+'"><div class="topic-head"><span class="topic-no">'+pad(id)+'</span><h2 id="topic-title-'+id+'">'+esc(topic)+'</h2><span class="saved-icon '+(working?'saving-indicator':saved?'saved-indicator':'pending-indicator')+'" role="status">'+(working?'กำลังบันทึก…':saved?'✓ บันทึกแล้ว':partial?'ยังไม่บันทึก':'รอประเมิน')+'</span></div><div class="criteria">'+scale('necessity','Necessity · ความจำเป็น')+scale('complexity','Complexity · ความซับซ้อน')+'</div></article>';
 }
-function renderVote(){
+function renderVote(focus){
  const completed=countComplete();
  const html=heading()+notice()+(state.isOpen?'':'<div class="notice">ปิดรับคะแนนแล้ว ท่านสามารถดูคะแนนที่เคยส่งได้</div>')+
  '<div class="vote-guide"><div class="guide-pill"><span class="guide-dot"></span><strong>Necessity</strong> ความจำเป็นต่อความยั่งยืน</div><div class="guide-pill"><span class="guide-dot warm"></span><strong>Complexity</strong> ความซับซ้อนในการดำเนินการ</div><div class="guide-pill">1 = ต่ำมาก · 5 = สูงมาก</div></div>'+
@@ -58,20 +58,24 @@ function renderVote(){
  '<div class="notice success">คะแนนจะบันทึกอัตโนมัติเมื่อเลือกครบทั้ง Necessity และ Complexity ในแต่ละประเด็น สามารถกลับมาเปลี่ยนคะแนนได้ระหว่างเปิดรับคะแนน</div></div>'+
  '<aside class="card panel progress-card"><div class="eyebrow">YOUR PROGRESS</div><div class="progress-number">'+completed+' <small style="font-size:16px">/ 10 ประเด็น</small></div><div class="progress-track"><div class="progress-fill" style="width:'+(completed*10)+'%"></div></div><p class="footnote">'+(completed===10?'ให้คะแนนครบทั้ง 10 ประเด็นแล้ว ขอบคุณสำหรับการประเมิน':'เลือกคะแนนสองด้านให้ครบในแต่ละประเด็น เพื่อบันทึก')+'</p><button class="btn primary" data-view="dashboard">ดูผลประเมินสด</button><p class="footnote">1 เบราว์เซอร์ = 1 เซสชัน ไม่ใช่การยืนยันตัวตนของผู้บริหาร</p></aside></div>';
  app.innerHTML=html;
+ if(focus&&typeof app.querySelector==='function'){
+  const selector='[data-topic="'+focus.id+'"][data-criterion="'+focus.criterion+'"][data-score="'+focus.score+'"]';
+  app.querySelector(selector)?.focus({preventScroll:true});
+ }
 }
 async function castVote(button){
  const id=Number(button.dataset.topic),criterion=button.dataset.criterion,score=Number(button.dataset.score);
  if(!state.isOpen)return toast('ปิดรับคะแนนแล้ว');
  const previous=state.votes[id]||{},next={...previous,[criterion]:score,saved:false};
- state.votes[id]=next;renderVote();
+ state.votes[id]=next;renderVote({id,criterion,score});
  if(!(next.necessity&&next.complexity))return;
  if(state.demo){state.votes[id].saved=true;renderVote();return toast('บันทึกคะแนนจำลองแล้ว');}
  if(state.saving.has(id))return;
- state.saving.add(id);
+ state.saving.add(id);renderVote();
  try {
-  await api('vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic_id:id,necessity:next.necessity,complexity:next.complexity})});
+  await api('vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic_id:id,necessity:next.necessity,complexity:next.complexity,reset_generation:state.resetGeneration})});
   state.votes[id].saved=true;toast('บันทึกคะแนนประเด็นที่ '+id+' แล้ว');
- }catch(error){state.votes[id].saved=false;toast(error.message);if(/ปิดรับ/.test(error.message))state.isOpen=false;}
+ }catch(error){state.votes[id].saved=false;toast(error.message);if(/ปิดรับ/.test(error.message))state.isOpen=false;if(/รีเซ็ต/.test(error.message))refresh();}
  finally{state.saving.delete(id);renderVote();}
 }
 function tableBar(value,complexity){const n=Math.max(0,Math.min(100,(Number(value||0)/5)*100));return '<span class="bar-track"><span class="bar-fill '+(complexity?'complex':'')+'" style="display:block;width:'+n+'%"></span></span>';}
