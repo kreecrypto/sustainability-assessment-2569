@@ -62,3 +62,16 @@ Official guide: https://docs.netlify.com/build/environment-variables/get-started
 ## Connector limitation
 
 The current ChatGPT-connected Netlify tools can inspect site and deploy status and can *attempt* to mutate environment variables. However, this account's environment writes returned HTTP 403, and the available tools do not expose a connect-repository/deploy action for the existing site. Complete steps A and B directly in the Netlify UI, then verify the new deploy details and migration list.
+
+
+## Verification after Netlify configuration — 19 November 2026
+
+The project owner reported that the GitHub repository was linked and the admin environment variable configured.
+
+Read-only verification via the connected Netlify API:
+- `ASSESSMENT_ADMIN_CODE` exists. Its value was **not** read or recorded in this document.
+- The environment variable metadata did **not** indicate secret protection; its scopes included builds/functions/post-processing/runtime rather than Functions alone. Update it in the Netlify UI where possible.
+- At verification, the latest production deploy was still `6afe7c2f04954a2445266e5a`, an API/drop deploy with no Git commit or branch, rather than a deploy from `main`.
+- The only recorded applied database migration was `20261119010000_initial_assessment`; the reset-generation migration was not yet applied.
+
+This documentation change is also a harmless new `main` commit to exercise Git continuous deployment if the repository connection is active. Do not use real executive data until the newest deploy shows a matching commit and successful reset migration.
