@@ -1,0 +1,15 @@
+{
+  "name": "sustainability-assessment-2569",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node --check public/app.js && node --check netlify/functions/api.mjs"
+  },
+  "dependencies": {
+    "@netlify/database": "2.0.3"
+  }
+}
