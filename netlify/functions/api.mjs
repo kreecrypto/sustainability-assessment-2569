@@ -36,9 +36,9 @@ export default async function handler(request) {
       const [scores,overview,state]=await Promise.all([
         db.query('SELECT t.topic_id,round(avg(v.necessity)::numeric,2) AS necessity_avg,round(avg(v.complexity)::numeric,2) AS complexity_avg,count(v.topic_id)::int AS vote_count FROM generate_series(1,10) AS t(topic_id) LEFT JOIN assessment_votes v ON v.topic_id=t.topic_id GROUP BY t.topic_id ORDER BY t.topic_id'),
         db.query('WITH person AS (SELECT participant_id,count(*) AS n FROM assessment_votes GROUP BY participant_id) SELECT count(*)::int AS total_participants,count(*) FILTER(WHERE n=10)::int AS completed_participants,coalesce(sum(n),0)::int AS total_votes FROM person'),
-        db.query('SELECT is_open FROM assessment_state WHERE id=1')
+        db.query('SELECT is_open,reset_generation FROM assessment_state WHERE id=1')
       ]);
-      return output({stats:scores.rows,overview:overview.rows[0],is_open:state.rows[0]?.is_open??false});
+      return output({stats:scores.rows,overview:overview.rows[0],is_open:state.rows[0]?.is_open??false,reset_generation:Number(state.rows[0]?.reset_generation??0)});
     }
     if(request.method==='GET'&&action==='session'){
       let token=cookie(request,SESSION_COOKIE),person=null,header={};
@@ -52,8 +52,8 @@ export default async function handler(request) {
         person=made.rows[0];
         header={'Set-Cookie':SESSION_COOKIE+'='+token+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=31536000'};
       }
-      const result=await db.query('SELECT topic_id,necessity,complexity FROM assessment_votes WHERE participant_id=$1 ORDER BY topic_id',[person.id]);
-      return output({votes:result.rows},200,header);
+      const [result,epoch]=await Promise.all([db.query('SELECT topic_id,necessity,complexity FROM assessment_votes WHERE participant_id=$1 ORDER BY topic_id',[person.id]),db.query('SELECT reset_generation FROM assessment_state WHERE id=1')]);
+      return output({votes:result.rows,reset_generation:Number(epoch.rows[0]?.reset_generation??0)},200,header);
     }
     if(request.method==='POST'&&action==='vote'){
       if(!sameOrigin(request)) return output({error:'คำขอจากเว็บไซต์อื่นไม่อนุญาต'},403);
@@ -65,16 +65,68 @@ export default async function handler(request) {
       const topic=Number(b.topic_id),necessity=Number(b.necessity),complexity=Number(b.complexity);
       if(![topic,necessity,complexity].every(Number.isInteger)||topic<1||topic>10||necessity<1||necessity>5||complexity<1||complexity>5)
         return output({error:'กรุณาระบุคะแนน 1–5 ให้ครบทั้งสองด้าน'},422);
-      const saved=await db.query('INSERT INTO assessment_votes(participant_id,topic_id,necessity,complexity) SELECT $1,$2,$3,$4 WHERE EXISTS(SELECT 1 FROM assessment_state WHERE id=1 AND is_open=true) ON CONFLICT(participant_id,topic_id) DO UPDATE SET necessity=EXCLUDED.necessity,complexity=EXCLUDED.complexity,updated_at=now() WHERE EXISTS(SELECT 1 FROM assessment_state WHERE id=1 AND is_open=true) RETURNING topic_id',[person.rows[0].id,topic,necessity,complexity]);
-      if(!saved.rows.length)return output({error:'ระบบปิดรับคะแนนแล้ว'},409);
-      return output({saved:true,topic_id:topic});
+      // Hold a shared row lock until the vote commits. An administrator reset
+      // takes an exclusive lock on this row, preventing late votes from leaking
+      // into a newly reset (closed) session.
+      const client=await db.connect();
+      try {
+        await client.query('BEGIN');
+        const meeting=await client.query('SELECT is_open,reset_generation FROM assessment_state WHERE id=1 FOR SHARE');
+        const active=meeting.rows[0];
+        if(!active?.is_open){
+          await client.query('ROLLBACK');
+          return output({error:'ระบบปิดรับคะแนนแล้ว กรุณารอผู้ดูแลเปิดรอบใหม่'},409);
+        }
+        const generation=Number(active.reset_generation);
+        if(!Number.isSafeInteger(b.reset_generation)||b.reset_generation!==generation){
+          await client.query('ROLLBACK');
+          return output({error:'รอบการประเมินมีการรีเซ็ต กรุณารอสักครู่แล้วให้คะแนนใหม่',reset_generation:generation},409);
+        }
+        const saved=await client.query(
+          'INSERT INTO assessment_votes(participant_id,topic_id,necessity,complexity) VALUES ($1,$2,$3,$4) ON CONFLICT(participant_id,topic_id) DO UPDATE SET necessity=EXCLUDED.necessity,complexity=EXCLUDED.complexity,updated_at=now() RETURNING topic_id',
+          [person.rows[0].id,topic,necessity,complexity]
+        );
+        await client.query('COMMIT');
+        return output({saved:true,topic_id:saved.rows[0].topic_id,reset_generation:generation});
+      }catch(error){
+        await client.query('ROLLBACK').catch(()=>{});
+        throw error;
+      }finally{
+        client.release();
+      }
     }
-    if(request.method==='POST'&&action==='control'){
+    if(request.method==='POST'&&(action==='control'||action==='reset')){
       if(!sameOrigin(request))return output({error:'คำขอจากเว็บไซต์อื่นไม่อนุญาต'},403);
       const secret=Netlify.env.get('ASSESSMENT_ADMIN_CODE');
       if(!secret||secret.length<12)return output({error:'ยังไม่ได้ตั้งรหัสผู้ดูแลใน Netlify'},503);
       const b=await bodyOf(request);
       if(!equal(b.code??'',secret))return output({error:'รหัสผู้ดูแลไม่ถูกต้อง'},403);
+      if(action==='reset'){
+        if(b.confirmation!=='RESET 2569'){
+          return output({error:'กรุณาพิมพ์ RESET 2569 เพื่อยืนยันการล้างคะแนนทั้งหมด'},422);
+        }
+        const client=await db.connect();
+        try {
+          await client.query('BEGIN');
+          // Serialize concurrent submissions with the reset and close intake.
+          await client.query('SELECT id FROM assessment_state WHERE id=1 FOR UPDATE');
+          const participantCount=await client.query('SELECT count(DISTINCT participant_id)::int AS count FROM assessment_votes');
+          const deleted=await client.query('DELETE FROM assessment_votes');
+          const updated=await client.query('UPDATE assessment_state SET is_open=false,reset_generation=reset_generation+1,updated_at=now() WHERE id=1 RETURNING reset_generation,is_open');
+          if(!updated.rows.length)throw new Error('Assessment state not initialized');
+          await client.query('COMMIT');
+          return output({
+            reset:true,
+            deleted_votes:deleted.rowCount,
+            affected_participants:participantCount.rows[0]?.count??0,
+            is_open:false,
+            reset_generation:Number(updated.rows[0].reset_generation)
+          });
+        }catch(error){
+          await client.query('ROLLBACK').catch(()=>{});
+          throw error;
+        }finally{client.release();}
+      }
       if(!['open','close'].includes(b.action))return output({error:'คำสั่งไม่ถูกต้อง'},422);
       const next=b.action==='open';
       await db.query('UPDATE assessment_state SET is_open=$1,updated_at=now() WHERE id=1',[next]);
