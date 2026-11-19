@@ -75,3 +75,15 @@ Read-only verification via the connected Netlify API:
 - The only recorded applied database migration was `20261119010000_initial_assessment`; the reset-generation migration was not yet applied.
 
 This documentation change is also a harmless new `main` commit to exercise Git continuous deployment if the repository connection is active. Do not use real executive data until the newest deploy shows a matching commit and successful reset migration.
+
+## Git deploy recheck after making the repository public — 2026-11-19
+
+The repository was verified **public** before this commit. This documentation-only update triggers a new Git `main` build on the existing Netlify project; it does not read, delete, or reset any assessment data.
+
+The old blocked deploy is not evidence of a new failure: verify the **new** deploy ID and its status. Required acceptance before calling this release complete:
+
+- Build `ready` with branch `main` and the latest commit SHA.
+- Applied migration `20261119020000_add_reset_generation` alongside the original schema.
+- `/api/stats` returns 10 topics plus numeric `reset_generation`.
+- Admin environment variable exists without its value being exposed to the public repository.
+
