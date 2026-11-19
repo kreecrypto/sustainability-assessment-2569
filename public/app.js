@@ -45,7 +45,7 @@ function voteCard(topic,i){
  const id=i+1,v=state.votes[id]||{},saved=v.saved||false;
  function scale(name,label){
   return '<div><div class="criteria-label">'+label+' <small>(1–5)</small></div><div class="scale '+(name==='complexity'?'complex':'')+'">'+
-  [1,2,3,4,5].map(n=>'<button type="button" aria-pressed="'+(v[name]===n)+'" data-topic="'+id+'" data-criterion="'+name+'" data-score="'+n+'" class="'+(v[name]===n?'selected':'')+'" '+(!state.isOpen?'disabled':'')+'>'+n+'</button>').join('')+
+  [1,2,3,4,5].map(n=>'<button type="button" aria-pressed="'+(v[name]===n)+'" data-topic="'+id+'" data-criterion="'+name+'" data-score="'+n+'" class="'+(v[name]===n?'selected':'')+'" '+(!state.isOpen||state.saving.has(id)?'disabled':'')+'>'+n+'</button>').join('')+
   '</div><div class="helptext"><span>ต่ำมาก</span><span>สูงมาก</span></div></div>';
  }
  return '<article class="panel topic-card '+(saved?'saved':'')+'" id="topic-'+id+'"><div class="topic-head"><span class="topic-no">'+pad(id)+'</span><h2>'+esc(topic)+'</h2><span class="saved-icon">'+(saved?'✓ บันทึกแล้ว':'')+'</span></div><div class="criteria">'+scale('necessity','Necessity · ความจำเป็น')+scale('complexity','Complexity · ความซับซ้อน')+'</div></article>';
@@ -106,6 +106,7 @@ function makeMatrix(rows){
  return svg;
 }
 function renderDashboard(){
+ const adminDraft=$('admin-code')?.value||'';
  const payload=state.stats||{stats:[],overview:{total_participants:0,completed_participants:0,total_votes:0},is_open:true};
  const rows=prepareRows(),person=payload.overview||{},n=rows.filter(x=>x.count).length;
  const averageNec=n?rows.reduce((s,x)=>s+(x.count?x.necessity:0),0)/n:0;
@@ -113,7 +114,7 @@ function renderDashboard(){
  const statCards=[['ผู้เข้าร่วมให้คะแนน',person.total_participants||0,'ผู้ที่บันทึกอย่างน้อย 1 ประเด็น'],['ประเมินครบ 10 ประเด็น',person.completed_participants||0,'จาก '+(person.total_participants||0)+' ผู้เข้าร่วม'],['Necessity เฉลี่ย',n?fmt(averageNec):'–','เฉลี่ยเท่ากันทั้ง 10 ประเด็น'],['Complexity เฉลี่ย',n?fmt(averageCom):'–','เฉลี่ยเท่ากันทั้ง 10 ประเด็น']];
  const top=[...rows].filter(r=>r.count).sort((a,b)=>b.necessity-a.necessity||a.id-b.id).slice(0,5);
  app.innerHTML=heading()+notice()+
- '<div class="toolbar" style="margin-bottom:16px"><span class="muted" style="font-size:12px"><span class="pulse"></span>อัปเดตล่าสุด '+(state.last?state.last.toLocaleTimeString('th-TH'):'กำลังรอข้อมูล')+' · '+(payload.is_open?'กำลังเปิดรับคะแนน':'ปิดรับคะแนน')</span><div class="actions"><button class="btn" data-copy="vote">คัดลอกลิงก์ประเมิน</button><button class="btn" data-copy="dashboard">คัดลอกลิงก์ Dashboard</button><button class="btn" data-refresh="1">⟳ รีเฟรช</button><button class="btn primary" data-export="1">↓ Export CSV</button></div></div>'+
+ '<div class="toolbar" style="margin-bottom:16px"><span class="muted" style="font-size:12px"><span class="pulse"></span>อัปเดตล่าสุด '+(state.last?state.last.toLocaleTimeString('th-TH'):'กำลังรอข้อมูล')+' · '+(payload.is_open?'กำลังเปิดรับคะแนน':'ปิดรับคะแนน')+'</span><div class="actions"><button class="btn" data-copy="vote">คัดลอกลิงก์ประเมิน</button><button class="btn" data-copy="dashboard">คัดลอกลิงก์ Dashboard</button><button class="btn" data-refresh="1">⟳ รีเฟรช</button><button class="btn primary" data-export="1">↓ Export CSV</button></div></div>'+
  '<section class="stat-grid">'+statCards.map((s,i)=>'<article class="panel stat-card"><div class="stat-label">'+s[0]+'</div><div class="stat-value '+(i>1?'em':'')+'">'+s[1]+'</div><div class="stat-note">'+s[2]+'</div></article>').join('')+'</section>'+
  '<div class="main-grid"><section class="panel panel-inner"><div class="section-head"><h2>Necessity × Complexity Matrix</h2><p>ค่าเฉลี่ย 1–5 ของแต่ละประเด็น · หนึ่งจุดต่อหนึ่งประเด็น (01–10)</p></div>'+makeMatrix(rows)+'<div class="legend"><span>หมายเลขแสดงรหัสประเด็น 10 ประเด็น</span></div></section>'+
  '<aside class="panel panel-inner"><div class="section-head"><h2>ประเด็น Necessity สูงสุด</h2><p>เรียงจากค่าเฉลี่ยความจำเป็น ไม่ใช่คะแนนรวมของสองด้าน</p></div><div class="ranking">'+(top.length?top.map(r=>'<div class="rank-item"><span class="rank-no">'+pad(r.id)+'</span><span class="rank-title">'+esc(r.topic)+'</span><span class="rank-score">'+fmt(r.necessity)+' / 5</span></div>').join(''):'<div class="empty">ยังไม่มีคะแนนประเมินจริง</div>')+'</div>'+
@@ -121,12 +122,13 @@ function renderDashboard(){
  '<section class="panel panel-inner table-panel"><div class="section-head"><h2>คะแนนประเมินรายประเด็น (10 ประเด็น)</h2><p>Necessity และ Complexity คำนวณแยก ไม่บวกหรือถ่วงน้ำหนัก</p></div><div class="table-wrap"><table class="table"><thead><tr><th>ประเด็นความยั่งยืน</th><th>Necessity</th><th>สเกล 1–5</th><th>Complexity</th><th>สเกล 1–5</th><th>ผู้ให้คะแนน</th></tr></thead><tbody>'+
  [...rows].sort((a,b)=>b.necessity-a.necessity||a.id-b.id).map(r=>'<tr><td>'+pad(r.id)+' &nbsp;'+esc(r.topic)+'</td><td><strong>'+(r.count?fmt(r.necessity):'–')+'</strong></td><td>'+tableBar(r.necessity,false)+'</td><td><strong>'+(r.count?fmt(r.complexity):'–')+'</strong></td><td>'+tableBar(r.complexity,true)+'</td><td>'+r.count+'</td></tr>').join('')+
  '</tbody></table></div></section>';
+ if($('admin-code'))$('admin-code').value=adminDraft;
 }
 function render(){updateTabs();state.view==='dashboard'?renderDashboard():renderVote();}
 async function refresh(){
  if(state.demo){state.stats=demoStats();state.isOpen=true;state.last=new Date();if(state.view==='dashboard')render();return;}
- try{const data=await api('stats');state.stats=data;state.isOpen=data.is_open;state.error='';state.last=new Date();if(state.view==='dashboard')render();}
- catch(error){state.error=error.message;if(state.view==='dashboard')render();}
+ try{const data=await api('stats');state.stats=data;state.isOpen=data.is_open;state.error='';state.last=new Date();if(state.view==='dashboard'&&document.activeElement?.id!=='admin-code')render();}
+ catch(error){state.error=error.message;if(state.view==='dashboard'&&document.activeElement?.id!=='admin-code')render();}
 }
 function exportCSV(){
  const rows=prepareRows();
