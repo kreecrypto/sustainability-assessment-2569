@@ -87,3 +87,9 @@ The old blocked deploy is not evidence of a new failure: verify the **new** depl
 - `/api/stats` returns 10 topics plus numeric `reset_generation`.
 - Admin environment variable exists without its value being exposed to the public repository.
 
+
+## Environment refresh release — 2026-11-19
+
+A later verification confirmed `ASSESSMENT_ADMIN_CODE` exists in the Netlify project. This documentation-only commit requests a new `main` deployment after the environment configuration changed. No secret value is stored in the repository, and no database scores or assessment states are modified by this documentation update.
+
+After deployment, verify the new published commit, read-only stats endpoint, and administrator access with a non-destructive open/close action in a controlled test window. Scope the admin variable to Functions/Production and protect it as a secret in the Netlify UI when available.
