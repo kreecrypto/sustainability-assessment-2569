@@ -43,3 +43,22 @@ Avoid overwriting committed migrations. Never check in `.env`, keys, `.netlify/`
 
 ## Notes
 This repository is independent of the existing UTP application and never modifies its code or database.
+
+
+## UI Foundation (free template)
+
+The interface is adapted from **Tabler UI Free**, an open-source, responsive Bootstrap 5 administration/dashboard kit licensed under MIT.
+
+- Official site: https://tabler.io/
+- Preview: https://preview.tabler.io/
+- License and legal notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- Pinned CSS: `@tabler/core@1.7.5` through jsDelivr in `public/index.html`
+- App-specific design tokens and responsive overrides: `public/styles.css`
+- No premium Tabler template, paid themes, React migration, or chart plugins are used.
+
+### UX applied to this project
+- Participant: clear 1–5 scoring control for **Necessity** and **Complexity**, 10 topics, local submission progress, save indicators, 46px touch targets.
+- Live Dashboard: four summary KPI cards, materiality matrix, ranking by necessity, detail table, CSV export.
+- Admin: meeting session opening/closing uses the existing secured endpoint.
+- Thai-first responsive layout; desktop presentation, tablet and mobile.
+- **Important:** updating the GitHub repository does not by itself prove Netlify has deployed these changes; ensure Git continuous deployment is linked or manually redeploy, then validate on deployed origin.
