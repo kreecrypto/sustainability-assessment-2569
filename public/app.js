@@ -71,12 +71,22 @@ async function castVote(button){
  if(!(next.necessity&&next.complexity))return;
  if(state.demo){state.votes[id].saved=true;renderVote();return toast('บันทึกคะแนนจำลองแล้ว');}
  if(state.saving.has(id))return;
+ const submitGeneration=state.resetGeneration;
  state.saving.add(id);renderVote();
  try {
-  await api('vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic_id:id,necessity:next.necessity,complexity:next.complexity,reset_generation:state.resetGeneration})});
-  state.votes[id].saved=true;toast('บันทึกคะแนนประเด็นที่ '+id+' แล้ว');
- }catch(error){state.votes[id].saved=false;toast(error.message);if(/ปิดรับ/.test(error.message))state.isOpen=false;if(/รีเซ็ต/.test(error.message))refresh();}
- finally{state.saving.delete(id);renderVote();}
+  await api('vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic_id:id,necessity:next.necessity,complexity:next.complexity,reset_generation:submitGeneration})});
+  if(submitGeneration!==state.resetGeneration)return;
+  if(state.votes[id])state.votes[id].saved=true;
+  toast('บันทึกคะแนนประเด็นที่ '+id+' แล้ว');
+ }catch(error){
+  if(state.votes[id]&&submitGeneration===state.resetGeneration)state.votes[id].saved=false;
+  toast(error.message);
+  if(/ปิดรับ/.test(error.message))state.isOpen=false;
+  if(/รีเซ็ต/.test(error.message))refresh();
+ }finally{
+  state.saving.delete(id);
+  if(state.view==='vote')renderVote();
+ }
 }
 function tableBar(value,complexity){const n=Math.max(0,Math.min(100,(Number(value||0)/5)*100));return '<span class="bar-track"><span class="bar-fill '+(complexity?'complex':'')+'" style="display:block;width:'+n+'%"></span></span>';}
 function prepareRows(){
