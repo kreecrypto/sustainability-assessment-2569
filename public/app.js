@@ -132,10 +132,39 @@ function renderDashboard(){
  if($('reset-phrase')){$('reset-phrase').value=resetDraft;if($('reset-action'))$('reset-action').disabled=state.resetLoading||resetDraft!=='RESET 2569';}
 }
 function render(){updateTabs();state.view==='dashboard'?renderDashboard():renderVote();}
-async function refresh(){
- if(state.demo){state.stats=demoStats();state.isOpen=true;state.last=new Date();if(state.view==='dashboard')render();return;}
- try{const data=await api('stats');state.stats=data;state.isOpen=data.is_open;state.error='';state.last=new Date();if(state.view==='dashboard'&&document.activeElement?.id!=='admin-code')render();}
- catch(error){state.error=error.message;if(state.view==='dashboard'&&document.activeElement?.id!=='admin-code')render();}
+async function refresh(force=false){
+ if(state.demo){
+  state.stats=demoStats();state.isOpen=true;state.resetGeneration=0;state.last=new Date();
+  if(state.view==='dashboard')render();
+  return;
+ }
+ try{
+  const data=await api('stats');
+  const previousOpen=state.isOpen,previousError=state.error;
+  const nextGeneration=Number(data.reset_generation??0);
+  const resetHappened=state.resetGeneration!==null&&nextGeneration!==state.resetGeneration;
+  state.stats=data;state.isOpen=data.is_open;state.error='';state.last=new Date();
+  if(resetHappened){
+   state.resetGeneration=nextGeneration;state.votes={};
+   if(state.view==='vote'){
+    const fresh=await api('session');
+    state.resetGeneration=Number(fresh.reset_generation??nextGeneration);
+    for(const vote of fresh.votes||[]){
+      state.votes[Number(vote.topic_id)]={necessity:Number(vote.necessity),complexity:Number(vote.complexity),saved:true};
+    }
+    toast('เริ่มรอบประเมินใหม่แล้ว คะแนนรอบก่อนถูกล้าง');
+   }
+  }else if(state.resetGeneration===null){
+   state.resetGeneration=nextGeneration;
+  }
+  const activeInput=document.activeElement?.id;
+  const preserveAdminInput=activeInput==='admin-code'||activeInput==='reset-phrase'||state.resetConfirmOpen;
+  if(state.view==='dashboard'&&(force||!preserveAdminInput))render();
+  if(state.view==='vote'&&(resetHappened||previousOpen!==state.isOpen||previousError!==state.error))renderVote();
+ }catch(error){
+  state.error=error.message;
+  if(state.view==='dashboard'&&(force||!state.resetConfirmOpen))render();
+ }
 }
 function exportCSV(){
  const rows=prepareRows();
@@ -153,8 +182,34 @@ async function changeControl(action){
  const code=$('admin-code')?.value;
  if(!code)return toast('กรุณาระบุรหัสผู้ดูแล');
  if(state.demo)return toast('โหมด Demo ไม่สามารถเปลี่ยนสถานะจริงได้');
- try{const r=await api('control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,action})});state.isOpen=r.is_open;await refresh();toast(r.is_open?'เปิดรับคะแนนแล้ว':'ปิดรับคะแนนแล้ว');}
+ try{const r=await api('control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,action})});state.isOpen=r.is_open;await refresh(true);toast(r.is_open?'เปิดรับคะแนนแล้ว':'ปิดรับคะแนนแล้ว');}
  catch(error){toast(error.message);}
+}
+async function resetDashboard(){
+ if(state.resetLoading)return;
+ if(state.demo)return toast('โหมด Demo ไม่สามารถล้างข้อมูลจริงได้');
+ const code=$('admin-code')?.value||'';
+ const confirmation=$('reset-phrase')?.value||'';
+ if(!code){toast('กรุณากรอกรหัสผู้ดูแล');$('admin-code')?.focus();return;}
+ if(confirmation!=='RESET 2569'){toast('กรุณาพิมพ์ RESET 2569 ให้ตรงทุกตัวอักษร');$('reset-phrase')?.focus();return;}
+ state.resetLoading=true;
+ const btn=$('reset-action');
+ if(btn){btn.disabled=true;btn.textContent='กำลังล้างคะแนน…';}
+ try{
+  const result=await api('reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,confirmation})});
+  state.resetGeneration=Number(result.reset_generation);
+  state.votes={};state.isOpen=false;state.resetConfirmOpen=false;
+  if($('admin-code'))$('admin-code').value='';
+  await refresh(true);
+  toast('ล้างคะแนน '+Number(result.deleted_votes||0)+' รายการแล้ว · ปิดรับคะแนนจนกว่าจะเปิดรอบใหม่');
+ }catch(error){toast(error.message);}
+ finally{
+  state.resetLoading=false;
+  if($('reset-action')){
+   $('reset-action').disabled=($('reset-phrase')?.value||'')!=='RESET 2569';
+   $('reset-action').textContent='ยืนยันล้างคะแนนทั้งหมด';
+  }
+ }
 }
 document.addEventListener('click',event=>{
  const score=event.target.closest('[data-topic][data-score]');
@@ -164,15 +219,33 @@ document.addEventListener('click',event=>{
  const copy=event.target.closest('[data-copy]');if(copy)return copyLink(copy.dataset.copy);
  if(event.target.closest('[data-refresh]'))return refresh();
  const ctrl=event.target.closest('[data-control]');if(ctrl)return changeControl(ctrl.dataset.control);
+ if(event.target.closest('[data-admin-toggle]')){
+  state.adminOpen=!state.adminOpen;state.resetConfirmOpen=false;renderDashboard();return;
+ }
+ if(event.target.closest('[data-reset-open]')){
+  if(state.demo)return toast('โหมด Demo ไม่สามารถล้างข้อมูลจริงได้');
+  state.adminOpen=true;state.resetConfirmOpen=true;renderDashboard();
+  $('admin-tools')?.scrollIntoView?.({behavior:'smooth',block:'center'});
+  $('reset-phrase')?.focus();
+  return;
+ }
+ if(event.target.closest('[data-reset-cancel]')){state.resetConfirmOpen=false;renderDashboard();return;}
+ if(event.target.closest('[data-reset-apply]'))return resetDashboard();
+});
+document.addEventListener('input',event=>{
+ if(event.target.id==='reset-phrase'&&$('reset-action')){
+  $('reset-action').disabled=state.resetLoading||event.target.value!=='RESET 2569';
+ }
 });
 async function boot(){
  if(!state.demo){
   try{
    const session=await api('session');
+   state.resetGeneration=Number(session.reset_generation??0);
    for(const v of session.votes||[])state.votes[Number(v.topic_id)]={necessity:Number(v.necessity),complexity:Number(v.complexity),saved:true};
   }catch(error){state.error=error.message;}
  }
  state.ready=true;render();await refresh();
- setInterval(()=>{if(state.view==='dashboard')refresh();},3000);
+ setInterval(()=>{if(!state.resetLoading)refresh();},3000);
 }
 boot();
