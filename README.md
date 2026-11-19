@@ -62,3 +62,25 @@ The interface is adapted from **Tabler UI Free**, an open-source, responsive Boo
 - Admin: meeting session opening/closing uses the existing secured endpoint.
 - Thai-first responsive layout; desktop presentation, tablet and mobile.
 - **Important:** updating the GitHub repository does not by itself prove Netlify has deployed these changes; ensure Git continuous deployment is linked or manually redeploy, then validate on deployed origin.
+
+
+## Reset Dashboard (administrator only)
+
+The live dashboard now contains a **Reset Dashboard** action. It is deliberately protected:
+
+1. Open Reset Dashboard from the toolbar; the admin management panel expands.
+2. Enter the secret `ASSESSMENT_ADMIN_CODE` (configured in Netlify environment variables, minimum 12 characters).
+3. Type **RESET 2569** exactly. The destructive confirmation action then becomes enabled.
+4. After successful reset, all scores and dashboard aggregates are cleared, and voting is **closed** until an administrator explicitly opens it again.
+
+**Warning:** Reset permanently deletes saved votes; export CSV first. Participant sessions remain, but are resynchronized using a database `reset_generation` value and cannot submit stale-round scores. The check runs approximately every 3 seconds.
+
+Changes in this release:
+- Admin-only `POST /api/reset` (password, confirmation and origin check).
+- Transactional vote reset and intake closure; in-flight votes serialized with reset.
+- Migration `20261119020000_add_reset_generation.sql` must be applied before deploying this API.
+- Score completion now reflects **server-saved** answers, not just choices made locally.
+- Collapsible administration panel and clear pending/saving/saved indicators.
+- UX audit and release QA: [docs/UX_UI_AUDIT_2569.md](docs/UX_UI_AUDIT_2569.md).
+
+**Production note:** Deploying code to GitHub is not sufficient. Confirm a Netlify deployment with the migration applied, `ASSESSMENT_ADMIN_CODE` set, and a two-device acceptance test using **dummy data only** before evaluating executives.
