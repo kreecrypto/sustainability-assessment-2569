@@ -1,15 +1,64 @@
 <!doctype html>
-<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#146c61"><meta name="description" content="ประเมินประเด็นความสำคัญด้านความยั่งยืน ประจำปี 2569">
-<title>ประเมินประเด็นความสำคัญด้านความยั่งยืน • 2569</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css">
-</head><body>
-<header class="topbar"><div class="container nav"><div class="brand"><span class="brand-symbol">◈</span><span><strong>SUSTAINABILITY ASSESSMENT</strong><small>ประเมินประเด็นความสำคัญด้านความยั่งยืน · 2569</small></span></div><div class="nav-end"><span id="demo-badge" class="demo-badge" hidden>DEMO MODE</span><nav aria-label="หน้าเว็บ"><button id="tab-vote" data-view="vote">แบบประเมิน</button><button id="tab-dashboard" data-view="dashboard">Dashboard</button></nav></div></div></header>
-<main class="container" id="app" aria-live="polite"><p class="loading">กำลังโหลดข้อมูล...</p></main>
-<footer class="footer"><div class="container foot-flex"><span>© 2569 Sustainability Materiality Assessment</span><span>Necessity × Complexity · คะแนน 1–5</span></div></footer>
-<div id="toast" role="status" aria-live="polite"></div>
-<script defer src="/app.js"></script>
-</body></html>
+<html lang="th" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0c665b">
+  <meta name="description" content="ระบบประเมินประเด็นความสำคัญด้านความยั่งยืน ประจำปี 2569">
+  <title>ประเมินประเด็นความสำคัญด้านความยั่งยืน | 2569</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap">
+  <!-- Tabler UI MIT licensed @tabler/core, pinned to an audited release. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.7.5/dist/css/tabler.min.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="theme-light sustainability-app">
+  <div class="page">
+    <header class="navbar navbar-expand-md topbar" role="banner">
+      <div class="container-xl nav">
+        <div class="brand" aria-label="Sustainability Assessment 2569">
+          <span class="brand-symbol" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="25" height="25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M25 5c-10 0-18 5-18 14a9 9 0 0 0 18 0c0-4 0-9 0-14Z"/>
+              <path d="M10 23c4-7 8-10 13-13"/>
+            </svg>
+          </span>
+          <span class="brand-label"><strong>SUSTAINABILITY <span>2569</span></strong><small>Materiality Assessment · Executive Workshop</small></span>
+        </div>
+        <div class="nav-end">
+          <span class="meeting-chip"><span class="live-indicator"></span> WORKSHOP 2569</span>
+          <span id="demo-badge" class="demo-badge" hidden>DEMO MODE</span>
+          <nav aria-label="หน้าเว็บ" class="nav-switch">
+            <button id="tab-vote" type="button" data-view="vote" aria-label="แบบประเมินผู้บริหาร">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/>
+              </svg>
+              <span>แบบประเมิน</span>
+            </button>
+            <button id="tab-dashboard" type="button" data-view="dashboard" aria-label="ผลประเมินสด">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/>
+              </svg>
+              <span>Live Dashboard</span>
+            </button>
+          </nav>
+        </div>
+      </div>
+    </header>
+    <div class="page-wrapper">
+      <main class="container-xl content-area" id="app" aria-live="polite">
+        <div class="loading"><div class="spinner-border text-success" role="status" aria-label="กำลังโหลด"></div><p>กำลังเชื่อมต่อข้อมูลการประเมิน...</p></div>
+      </main>
+      <footer class="footer">
+        <div class="container-xl foot-flex">
+          <span>© 2569 Sustainability Assessment · สำหรับการประชุมผู้บริหาร</span>
+          <span>Necessity × Complexity · ระดับคะแนน 1–5</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script defer src="/app.js"></script>
+</body>
+</html>
