@@ -156,3 +156,90 @@ body.sustainability-app{background:var(--s-canvas);color:var(--s-ink);font-famil
  .sustainability-app .stat-label{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+
+/* UX Audit P0/P1 — Reset Dashboard + participant feedback (2026-11-19) */
+.sustainability-app [hidden]{display:none!important}
+.sustainability-app .dashboard-reset-btn{
+  color:#a54b3d;border-color:#ead1c9;background:#fff;
+}
+.sustainability-app .dashboard-reset-btn:hover{
+  color:#913b32;background:#fff4ef;border-color:#dcaa9f;
+}
+.sustainability-app .admin-box{padding:0;overflow:hidden;border-radius:12px}
+.sustainability-app .admin-toggle{
+  width:100%;min-height:50px;background:transparent;border:0;
+  display:flex;align-items:center;justify-content:space-between;
+  color:#375d51;font-weight:800;font-size:12px;padding:13px 15px;text-align:left;
+}
+.sustainability-app .admin-toggle:hover{background:#edf4f1}
+.sustainability-app .admin-actions{padding:0 16px 16px;border-top:1px solid #e2ede6}
+.sustainability-app .admin-actions .footnote{padding:7px 0 0;margin:0}
+.sustainability-app .admin-label{display:block;margin-top:12px;font-weight:700;font-size:11px;color:#48665a}
+.sustainability-app .admin-actions input{
+  display:block;width:100%;border:1px solid #d6e2db;
+  padding:10px 12px;border-radius:8px;color:#1d3d32;
+  background:#fff;font-size:12px;min-height:42px;
+}
+.sustainability-app .admin-actions input:focus{
+  outline:2px solid #75b8a4;outline-offset:1px;
+}
+.sustainability-app .admin-control-btn{width:100%;margin-top:4px}
+.sustainability-app .admin-divider{height:1px;background:#e0e9e3;margin:17px 0 14px}
+.sustainability-app .reset-start{
+  width:100%;background:#fff5f1;color:#a04435;
+  border-color:#eac7bf;min-height:42px;
+}
+.sustainability-app .reset-start:hover{background:#feeae3;color:#a04435}
+.sustainability-app .reset-hint{font-size:10px;color:#8f9c91;line-height:1.8;margin:7px 0 0}
+.sustainability-app .reset-confirm{
+  margin-top:14px;padding:14px;background:#fff9f6;
+  border:1px solid #e8c5b9;border-radius:11px;
+  box-shadow:0 3px 12px #8f3c3111;
+}
+.sustainability-app .reset-title{
+  display:block;color:#992e23;font-size:14px;font-weight:800;
+}
+.sustainability-app .reset-confirm p{
+  color:#7d5549;font-size:11px;line-height:1.85;margin:9px 0;
+}
+.sustainability-app .reset-confirm .admin-label{color:#6a4237;font-size:11px}
+.sustainability-app .reset-confirm input{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;
+  letter-spacing:.035em;
+}
+.sustainability-app .text-action{
+  color:#a0483d;padding:0;border:0;background:transparent;
+  text-decoration:underline;font-size:inherit;cursor:pointer;font-weight:700;
+}
+.sustainability-app .reset-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.sustainability-app .reset-actions .btn{flex:1 1 auto;min-height:42px;white-space:normal}
+.sustainability-app .btn.reset-danger{background:#a83c32;color:white;border-color:#a83c32}
+.sustainability-app .btn.reset-danger:hover{background:#8f2b23;color:#fff;border-color:#8f2b23}
+.sustainability-app .btn.reset-danger:disabled{opacity:.43;cursor:not-allowed}
+.sustainability-app .topic-card .saved-icon{font-size:10px;line-height:1.4;padding:5px 8px;border-radius:99px;flex-shrink:0}
+.sustainability-app .saved-icon.pending-indicator{
+  background:#eef2ef;color:#71877e;
+}
+.sustainability-app .saved-icon.saving-indicator{
+  background:#fff4de;color:#93712d;
+}
+.sustainability-app .saved-icon.saved-indicator{
+  background:#e4f6ec;color:#177153;
+}
+.sustainability-app .topic-card:focus-within{border-color:#8cbfac}
+.sustainability-app .vote-layout .progress-number{
+  font-variant-numeric:tabular-nums;
+}
+@media(max-width:760px){
+  .sustainability-app .dashboard-reset-btn{font-size:11px}
+  .sustainability-app .toolbar .actions{width:100%}
+  .sustainability-app .toolbar .actions .btn{flex:1 1 auto}
+  .sustainability-app .topic-head{align-items:flex-start}
+  .sustainability-app .topic-card .saved-icon{margin-top:2px}
+}
+@media(max-width:420px){
+  .sustainability-app .admin-actions{padding:0 12px 14px}
+  .sustainability-app .reset-actions{flex-direction:column}
+  .sustainability-app .reset-actions .btn{width:100%;flex:1 1 auto}
+}
