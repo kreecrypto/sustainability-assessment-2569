@@ -26,7 +26,7 @@ async function api(path,options){
   if(!response.ok)throw new Error(result.error||'เกิดข้อผิดพลาดในการเชื่อมต่อ');
   return result;
 }
-function heading(){return '<div class="hero"><div class="eyebrow">SUSTAINABILITY MATERIALITY · 2569</div><h1>ประเมินประเด็นความสำคัญด้านความยั่งยืน</h1><p class="muted">ประจำปี 2569 · เกณฑ์ Necessity × Complexity · คะแนน 1–5</p></div>';}
+function heading(){return '<section class="hero"><div class="eyebrow">EXECUTIVE SUSTAINABILITY WORKSHOP / FY 2569</div><h1>ประเมินประเด็นความสำคัญด้านความยั่งยืน</h1><p class="muted">ประจำปี 2569 · ประเมิน 10 ประเด็น ด้วยเกณฑ์ Necessity และ Complexity อย่างละ 1–5 คะแนน</p></section>';}
 function notice(){return state.error?'<div class="notice error">'+esc(state.error)+'</div>':state.demo?'<div class="notice">ข้อมูลสาธิตเท่านั้น — คะแนนทั้งหมดเป็นข้อมูลจำลอง และไม่ได้บันทึกลงฐานข้อมูลจริง</div>':'';}
 function updateTabs(){
   $('tab-vote').classList.toggle('active',state.view==='vote');
@@ -45,17 +45,18 @@ function voteCard(topic,i){
  const id=i+1,v=state.votes[id]||{},saved=v.saved||false;
  function scale(name,label){
   return '<div><div class="criteria-label">'+label+' <small>(1–5)</small></div><div class="scale '+(name==='complexity'?'complex':'')+'">'+
-  [1,2,3,4,5].map(n=>'<button type="button" aria-pressed="'+(v[name]===n)+'" data-topic="'+id+'" data-criterion="'+name+'" data-score="'+n+'" class="'+(v[name]===n?'selected':'')+'" '+(!state.isOpen||state.saving.has(id)?'disabled':'')+'>'+n+'</button>').join('')+
+  [1,2,3,4,5].map(n=>'<button type="button" aria-label="ประเด็น '+id+' '+label+' ระดับ '+n+' จาก 5" aria-pressed="'+(v[name]===n)+'" data-topic="'+id+'" data-criterion="'+name+'" data-score="'+n+'" class="'+(v[name]===n?'selected':'')+'" '+(!state.isOpen||state.saving.has(id)?'disabled':'')+'>'+n+'</button>').join('')+
   '</div><div class="helptext"><span>ต่ำมาก</span><span>สูงมาก</span></div></div>';
  }
- return '<article class="panel topic-card '+(saved?'saved':'')+'" id="topic-'+id+'"><div class="topic-head"><span class="topic-no">'+pad(id)+'</span><h2>'+esc(topic)+'</h2><span class="saved-icon">'+(saved?'✓ บันทึกแล้ว':'')+'</span></div><div class="criteria">'+scale('necessity','Necessity · ความจำเป็น')+scale('complexity','Complexity · ความซับซ้อน')+'</div></article>';
+ return '<article class="card panel topic-card '+(saved?'saved':'')+'" id="topic-'+id+'"><div class="topic-head"><span class="topic-no">'+pad(id)+'</span><h2>'+esc(topic)+'</h2><span class="saved-icon">'+(saved?'✓ บันทึกแล้ว':'')+'</span></div><div class="criteria">'+scale('necessity','Necessity · ความจำเป็น')+scale('complexity','Complexity · ความซับซ้อน')+'</div></article>';
 }
 function renderVote(){
  const completed=countComplete();
  const html=heading()+notice()+(state.isOpen?'':'<div class="notice">ปิดรับคะแนนแล้ว ท่านสามารถดูคะแนนที่เคยส่งได้</div>')+
+ '<div class="vote-guide"><div class="guide-pill"><span class="guide-dot"></span><strong>Necessity</strong> ความจำเป็นต่อความยั่งยืน</div><div class="guide-pill"><span class="guide-dot warm"></span><strong>Complexity</strong> ความซับซ้อนในการดำเนินการ</div><div class="guide-pill">1 = ต่ำมาก · 5 = สูงมาก</div></div>'+
  '<div class="vote-layout"><div class="vote-list">'+TOPICS.map(voteCard).join('')+
  '<div class="notice success">คะแนนจะบันทึกอัตโนมัติเมื่อเลือกครบทั้ง Necessity และ Complexity ในแต่ละประเด็น สามารถกลับมาเปลี่ยนคะแนนได้ระหว่างเปิดรับคะแนน</div></div>'+
- '<aside class="panel progress-card"><div class="eyebrow">YOUR PROGRESS</div><div class="progress-number">'+completed+' <small style="font-size:16px">/ 10 ประเด็น</small></div><div class="progress-track"><div class="progress-fill" style="width:'+(completed*10)+'%"></div></div><p class="footnote">'+(completed===10?'ให้คะแนนครบทั้ง 10 ประเด็นแล้ว ขอบคุณสำหรับการประเมิน':'เลือกคะแนนสองด้านให้ครบในแต่ละประเด็น เพื่อบันทึก')+'</p><button class="btn primary" data-view="dashboard">ดูผลประเมินสด</button><p class="footnote">1 เบราว์เซอร์ = 1 เซสชัน ไม่ใช่การยืนยันตัวตนของผู้บริหาร</p></aside></div>';
+ '<aside class="card panel progress-card"><div class="eyebrow">YOUR PROGRESS</div><div class="progress-number">'+completed+' <small style="font-size:16px">/ 10 ประเด็น</small></div><div class="progress-track"><div class="progress-fill" style="width:'+(completed*10)+'%"></div></div><p class="footnote">'+(completed===10?'ให้คะแนนครบทั้ง 10 ประเด็นแล้ว ขอบคุณสำหรับการประเมิน':'เลือกคะแนนสองด้านให้ครบในแต่ละประเด็น เพื่อบันทึก')+'</p><button class="btn primary" data-view="dashboard">ดูผลประเมินสด</button><p class="footnote">1 เบราว์เซอร์ = 1 เซสชัน ไม่ใช่การยืนยันตัวตนของผู้บริหาร</p></aside></div>';
  app.innerHTML=html;
 }
 async function castVote(button){
@@ -115,11 +116,11 @@ function renderDashboard(){
  const top=[...rows].filter(r=>r.count).sort((a,b)=>b.necessity-a.necessity||a.id-b.id).slice(0,5);
  app.innerHTML=heading()+notice()+
  '<div class="toolbar" style="margin-bottom:16px"><span class="muted" style="font-size:12px"><span class="pulse"></span>อัปเดตล่าสุด '+(state.last?state.last.toLocaleTimeString('th-TH'):'กำลังรอข้อมูล')+' · '+(payload.is_open?'กำลังเปิดรับคะแนน':'ปิดรับคะแนน')+'</span><div class="actions"><button class="btn" data-copy="vote">คัดลอกลิงก์ประเมิน</button><button class="btn" data-copy="dashboard">คัดลอกลิงก์ Dashboard</button><button class="btn" data-refresh="1">⟳ รีเฟรช</button><button class="btn primary" data-export="1">↓ Export CSV</button></div></div>'+
- '<section class="stat-grid">'+statCards.map((s,i)=>'<article class="panel stat-card"><div class="stat-label">'+s[0]+'</div><div class="stat-value '+(i>1?'em':'')+'">'+s[1]+'</div><div class="stat-note">'+s[2]+'</div></article>').join('')+'</section>'+
- '<div class="main-grid"><section class="panel panel-inner"><div class="section-head"><h2>Necessity × Complexity Matrix</h2><p>ค่าเฉลี่ย 1–5 ของแต่ละประเด็น · หนึ่งจุดต่อหนึ่งประเด็น (01–10)</p></div>'+makeMatrix(rows)+'<div class="legend"><span>หมายเลขแสดงรหัสประเด็น 10 ประเด็น</span></div></section>'+
- '<aside class="panel panel-inner"><div class="section-head"><h2>ประเด็น Necessity สูงสุด</h2><p>เรียงจากค่าเฉลี่ยความจำเป็น ไม่ใช่คะแนนรวมของสองด้าน</p></div><div class="ranking">'+(top.length?top.map(r=>'<div class="rank-item"><span class="rank-no">'+pad(r.id)+'</span><span class="rank-title">'+esc(r.topic)+'</span><span class="rank-score">'+fmt(r.necessity)+' / 5</span></div>').join(''):'<div class="empty">ยังไม่มีคะแนนประเมินจริง</div>')+'</div>'+
+ '<section class="stat-grid">'+statCards.map((s,i)=>'<article class="card panel stat-card"><div class="stat-label">'+s[0]+'</div><div class="stat-value '+(i>1?'em':'')+'">'+s[1]+'</div><div class="stat-note">'+s[2]+'</div></article>').join('')+'</section>'+
+ '<div class="main-grid"><section class="card panel panel-inner"><div class="section-head"><h2>Necessity × Complexity Matrix</h2><p>ค่าเฉลี่ย 1–5 ของแต่ละประเด็น · หนึ่งจุดต่อหนึ่งประเด็น (01–10)</p></div>'+makeMatrix(rows)+'<div class="legend"><span>หมายเลขแสดงรหัสประเด็น 10 ประเด็น</span></div></section>'+
+ '<aside class="card panel panel-inner"><div class="section-head"><h2>ประเด็น Necessity สูงสุด</h2><p>เรียงจากค่าเฉลี่ยความจำเป็น ไม่ใช่คะแนนรวมของสองด้าน</p></div><div class="ranking">'+(top.length?top.map(r=>'<div class="rank-item"><span class="rank-no">'+pad(r.id)+'</span><span class="rank-title">'+esc(r.topic)+'</span><span class="rank-score">'+fmt(r.necessity)+' / 5</span></div>').join(''):'<div class="empty">ยังไม่มีคะแนนประเมินจริง</div>')+'</div>'+
  '<div class="admin-box"><div class="eyebrow">SESSION CONTROL</div><p class="footnote">เฉพาะผู้ดูแลที่ทราบรหัสระบบ</p><input type="password" id="admin-code" autocomplete="off" placeholder="รหัสผู้ดูแล (ขั้นต่ำ 12 ตัวอักษร)"><button class="btn" data-control="'+(payload.is_open?'close':'open')+'">'+(payload.is_open?'ปิดรับคะแนน':'เปิดรับคะแนน')+'</button></div></aside></div>'+
- '<section class="panel panel-inner table-panel"><div class="section-head"><h2>คะแนนประเมินรายประเด็น (10 ประเด็น)</h2><p>Necessity และ Complexity คำนวณแยก ไม่บวกหรือถ่วงน้ำหนัก</p></div><div class="table-wrap"><table class="table"><thead><tr><th>ประเด็นความยั่งยืน</th><th>Necessity</th><th>สเกล 1–5</th><th>Complexity</th><th>สเกล 1–5</th><th>ผู้ให้คะแนน</th></tr></thead><tbody>'+
+ '<section class="card panel panel-inner table-panel"><div class="section-head"><h2>คะแนนประเมินรายประเด็น (10 ประเด็น)</h2><p>คะแนนเฉลี่ยของแต่ละด้านจากผู้เข้าร่วมที่ให้คะแนนประเด็นนั้น ๆ · ไม่บวกหรือถ่วงน้ำหนัก</p></div><div class="table-wrap"><table class="table"><thead><tr><th>ประเด็นความยั่งยืน</th><th>Necessity</th><th>สเกล 1–5</th><th>Complexity</th><th>สเกล 1–5</th><th>ผู้ให้คะแนน</th></tr></thead><tbody>'+
  [...rows].sort((a,b)=>b.necessity-a.necessity||a.id-b.id).map(r=>'<tr><td>'+pad(r.id)+' &nbsp;'+esc(r.topic)+'</td><td><strong>'+(r.count?fmt(r.necessity):'–')+'</strong></td><td>'+tableBar(r.necessity,false)+'</td><td><strong>'+(r.count?fmt(r.complexity):'–')+'</strong></td><td>'+tableBar(r.complexity,true)+'</td><td>'+r.count+'</td></tr>').join('')+
  '</tbody></table></div></section>';
  if($('admin-code'))$('admin-code').value=adminDraft;
